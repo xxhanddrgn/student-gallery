@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우리 반 갤러리</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #6c63ff;
+      --primary-light: #ede9ff;
+      --accent: #ff6584;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #2d2d3a;
+      --muted: #888;
+      --border: #e3e6f0;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(108,99,255,.10);
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, #9b8fff 100%);
+      color: #fff;
+      padding: 28px 24px 20px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(108,99,255,.25);
+    }
+    header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p  { margin-top: 6px; font-size: .95rem; opacity: .85; }
+
+    /* ── Upload section ── */
+    .upload-section {
+      max-width: 680px;
+      margin: 32px auto 0;
+      padding: 0 16px;
+    }
+
+    .upload-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 28px 24px;
+    }
+    .upload-card h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; color: var(--primary); }
+
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .form-row .field { flex: 1; min-width: 160px; }
+
+    label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: .3px; text-transform: uppercase; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .97rem;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color .2s;
+      font-family: inherit;
+    }
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2.5px dashed #c5bff8;
+      border-radius: 12px;
+      background: var(--primary-light);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: #e4deff; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-zone .dz-icon { font-size: 2.4rem; margin-bottom: 8px; }
+    .drop-zone .dz-text { font-size: .93rem; color: var(--primary); font-weight: 600; }
+    .drop-zone .dz-sub  { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+
+    #preview-wrap { margin-bottom: 16px; display: none; }
+    #preview-wrap img {
+      max-height: 220px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      display: block;
+      margin: 0 auto;
+      object-fit: cover;
+      max-width: 100%;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 24px;
+      font-size: .97rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--primary); color: #fff; width: 100%; justify-content: center; font-size: 1rem; padding: 13px; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Gallery ── */
+    .gallery-section { max-width: 1100px; margin: 36px auto 60px; padding: 0 16px; }
+    .gallery-section h2 { font-size: 1.25rem; font-weight: 800; margin-bottom: 20px; }
+    .gallery-section h2 span { color: var(--primary); }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .post-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .post-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(108,99,255,.15); }
+
+    .post-img-wrap { position: relative; padding-top: 70%; overflow: hidden; background: #f0f0f5; }
+    .post-img-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .3s;
+    }
+    .post-card:hover .post-img-wrap img { transform: scale(1.04); }
+
+    .post-body { padding: 16px 18px 12px; flex: 1; display: flex; flex-direction: column; }
+
+    .post-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .post-author {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .83rem; font-weight: 700; color: var(--primary);
+      background: var(--primary-light); border-radius: 20px; padding: 3px 10px;
+    }
+    .post-author::before { content: '👤'; font-size: .9rem; }
+    .post-date { font-size: .78rem; color: var(--muted); }
+
+    .post-title { font-size: 1.03rem; font-weight: 700; margin-bottom: 6px; }
+    .post-desc { font-size: .88rem; color: var(--muted); line-height: 1.5; flex: 1; }
+
+    /* Actions */
+    .post-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 14px;
+      padding-top: 12px;
+    }
+
+    .btn-like {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: 1.5px solid var(--border); border-radius: 20px;
+      padding: 5px 14px; font-size: .9rem; cursor: pointer; font-weight: 600;
+      color: var(--muted); transition: all .2s; font-family: inherit;
+    }
+    .btn-like:hover  { border-color: var(--accent); color: var(--accent); background: #fff0f4; }
+    .btn-like.liked  { border-color: var(--accent); color: var(--accent); background: #fff0f4; }
+    .btn-like .heart { font-size: 1rem; transition: transform .2s; }
+    .btn-like.liked .heart { transform: scale(1.2); }
+
+    .comment-toggle {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: none; font-size: .9rem; cursor: pointer;
+      font-weight: 600; color: var(--muted); transition: color .2s; font-family: inherit;
+      padding: 5px 0;
+    }
+    .comment-toggle:hover { color: var(--primary); }
+
+    /* Comments */
+    .comment-section {
+      padding: 0 18px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .comment-section.open { display: flex; }
+
+    .comment-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .comment-item {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: .87rem;
+    }
+    .comment-item .c-author { font-weight: 700; color: var(--primary); margin-right: 6px; }
+    .comment-item .c-text { color: var(--text); }
+    .comment-item .c-time { font-size: .75rem; color: var(--muted); margin-top: 3px; }
+
+    .no-comments { font-size: .85rem; color: var(--muted); text-align: center; padding: 6px 0; }
+
+    .comment-name-row { display: flex; gap: 8px; }
+    .comment-name-row input[type="text"] { max-width: 130px; flex-shrink: 0; }
+    .btn-comment {
+      background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      padding: 9px 16px; font-size: .88rem; cursor: pointer; font-weight: 700;
+      white-space: nowrap; font-family: inherit; transition: opacity .2s;
+    }
+    .btn-comment:hover { opacity: .85; }
+    .btn-comment:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      grid-column: 1/-1;
+    }
+    .empty-state .emoji { font-size: 3.5rem; display: block; margin-bottom: 14px; }
+    .empty-state p { font-size: 1.05rem; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #2d2d3a; color: #fff; padding: 12px 24px; border-radius: 30px;
+      font-size: .93rem; font-weight: 600; opacity: 0; transition: all .35s; z-index: 999;
+      white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 520px) {
+      header h1 { font-size: 1.5rem; }
+      .upload-card { padding: 20px 16px; }
+      .form-row { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎨 우리 반 갤러리</h1>
+  <p>내 작품을 올리고, 친구들의 작품에 좋아요와 댓글을 남겨봐요!</p>
+</header>
+
+<!-- Upload -->
+<section class="upload-section">
+  <div class="upload-card">
+    <h2>✏️ 작품 올리기</h2>
+
+    <div class="form-row">
+      <div class="field">
+        <label>이름</label>
+        <input type="text" id="up-name" placeholder="홍길동" maxlength="20" />
+      </div>
+      <div class="field">
+        <label>제목</label>
+        <input type="text" id="up-title" placeholder="작품 제목을 입력하세요" maxlength="40" />
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label>설명 (선택)</label>
+      <textarea id="up-desc" placeholder="작품에 대해 간단히 적어주세요..." maxlength="200"></textarea>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="dz-icon">🖼️</div>
+      <div class="dz-text">이미지를 클릭하거나 여기에 드래그하세요</div>
+      <div class="dz-sub">JPG, PNG, GIF, WEBP 지원 · 최대 10MB</div>
+    </div>
+
+    <div id="preview-wrap">
+      <img id="preview-img" src="" alt="미리보기" />
+    </div>
+
+    <button class="btn btn-primary" id="btn-upload" disabled>🚀 작품 올리기</button>
+  </div>
+</section>
+
+<!-- Gallery -->
+<section class="gallery-section">
+  <h2>📸 <span id="post-count">0</span>개의 작품</h2>
+  <div class="gallery-grid" id="gallery">
+    <div class="empty-state"><span class="emoji">⏳</span><p>불러오는 중...</p></div>
+  </div>
+</section>
+
+<div id="toast"></div>
+
+<script>
+// ── Helpers ───────────────────────────────────────────────
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── Like state (localStorage – per device) ────────────────
+function getLikeKey(id) { return 'like_' + id; }
+function hasLiked(id)   { return localStorage.getItem(getLikeKey(id)) === '1'; }
+function setLiked(id, v){ v ? localStorage.setItem(getLikeKey(id), '1') : localStorage.removeItem(getLikeKey(id)); }
+
+// ── API calls ─────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '알 수 없는 오류' }));
+    throw new Error(err.error || '서버 오류');
+  }
+  return res.json();
+}
+
+// ── Upload logic ──────────────────────────────────────────
+let selectedFile = null;
+
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const previewImg  = document.getElementById('preview-img');
+const previewWrap = document.getElementById('preview-wrap');
+const btnUpload   = document.getElementById('btn-upload');
+
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) { showToast('이미지 파일만 올릴 수 있어요!'); return; }
+  if (file.size > 10 * 1024 * 1024) { showToast('파일 크기는 10MB 이하여야 해요!'); return; }
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewImg.src = e.target.result;
+    previewWrap.style.display = 'block';
+    checkReady();
+  };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+function checkReady() {
+  const name  = document.getElementById('up-name').value.trim();
+  const title = document.getElementById('up-title').value.trim();
+  btnUpload.disabled = !(name && title && selectedFile);
+}
+document.getElementById('up-name').addEventListener('input', checkReady);
+document.getElementById('up-title').addEventListener('input', checkReady);
+
+btnUpload.addEventListener('click', async () => {
+  const name  = document.getElementById('up-name').value.trim();
+  const title = document.getElementById('up-title').value.trim();
+  const desc  = document.getElementById('up-desc').value.trim();
+  if (!name || !title || !selectedFile) return;
+
+  btnUpload.disabled = true;
+  btnUpload.innerHTML = '<span class="spinner"></span> 업로드 중...';
+
+  try {
+    const fd = new FormData();
+    fd.append('name',  name);
+    fd.append('title', title);
+    fd.append('desc',  desc);
+    fd.append('image', selectedFile);
+
+    await api('/api/posts', { method: 'POST', body: fd });
+
+    // Reset form
+    document.getElementById('up-name').value  = '';
+    document.getElementById('up-title').value = '';
+    document.getElementById('up-desc').value  = '';
+    fileInput.value = '';
+    selectedFile = null;
+    previewWrap.style.display = 'none';
+    previewImg.src = '';
+
+    showToast('🎉 작품이 올라갔어요!');
+    await renderGallery();
+    document.querySelector('.gallery-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    showToast('❌ ' + err.message);
+  } finally {
+    btnUpload.innerHTML = '🚀 작품 올리기';
+    checkReady();
+  }
+});
+
+// ── Gallery ───────────────────────────────────────────────
+function renderComments(comments) {
+  if (!comments || comments.length === 0)
+    return '<div class="no-comments">댓글이 없어요. 첫 댓글을 남겨보세요!</div>';
+  return comments.map(c => `
+    <div class="comment-item">
+      <span class="c-author">${esc(c.name)}</span><span class="c-text">${esc(c.text)}</span>
+      <div class="c-time">${formatDate(c.created_at)}</div>
+    </div>`).join('');
+}
+
+async function renderGallery() {
+  const gallery = document.getElementById('gallery');
+  try {
+    const posts = await api('/api/posts');
+    document.getElementById('post-count').textContent = posts.length;
+    gallery.innerHTML = '';
+
+    if (posts.length === 0) {
+      gallery.innerHTML = `
+        <div class="empty-state">
+          <span class="emoji">🎨</span>
+          <p>아직 작품이 없어요. 첫 번째 작품을 올려보세요!</p>
+        </div>`;
+      return;
+    }
+
+    posts.forEach(post => {
+      const liked = hasLiked(post.id);
+      const card  = document.createElement('article');
+      card.className = 'post-card';
+      card.dataset.id = post.id;
+
+      card.innerHTML = `
+        <div class="post-img-wrap">
+          <img src="${esc(post.imageSrc)}" alt="${esc(post.title)}" loading="lazy" />
+        </div>
+        <div class="post-body">
+          <div class="post-meta">
+            <span class="post-author">${esc(post.name)}</span>
+            <span class="post-date">${formatDate(post.createdAt)}</span>
+          </div>
+          <div class="post-title">${esc(post.title)}</div>
+          ${post.desc ? `<div class="post-desc">${esc(post.desc)}</div>` : ''}
+          <div class="post-actions">
+            <button class="btn-like${liked ? ' liked' : ''}" data-id="${post.id}">
+              <span class="heart">${liked ? '❤️' : '🤍'}</span>
+              <span class="like-count">${post.likeCount}</span>
+            </button>
+            <button class="comment-toggle" data-id="${post.id}">
+              💬 댓글 ${post.comments.length > 0 ? post.comments.length : ''}
+            </button>
+          </div>
+        </div>
+        <div class="comment-section" id="cs-${post.id}">
+          <div class="comment-list" id="cl-${post.id}">
+            ${renderComments(post.comments)}
+          </div>
+          <div class="comment-name-row">
+            <input type="text" class="c-name" placeholder="이름" maxlength="15" />
+            <input type="text" class="c-text-input" placeholder="댓글을 입력하세요..." maxlength="150" data-id="${post.id}" style="flex:1" />
+            <button class="btn-comment" data-id="${post.id}">등록</button>
+          </div>
+        </div>`;
+
+      gallery.appendChild(card);
+    });
+  } catch (err) {
+    gallery.innerHTML = `<div class="empty-state"><span class="emoji">⚠️</span><p>불러오기 실패: ${esc(err.message)}</p></div>`;
+  }
+}
+
+// ── Event delegation ──────────────────────────────────────
+document.getElementById('gallery').addEventListener('click', async e => {
+  // Like
+  const likeBtn = e.target.closest('.btn-like');
+  if (likeBtn) {
+    const id     = likeBtn.dataset.id;
+    const liked  = hasLiked(id);
+    const action = liked ? 'unlike' : 'like';
+    likeBtn.disabled = true;
+    try {
+      const { likeCount } = await api(`/api/posts/${id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      setLiked(id, !liked);
+      likeBtn.classList.toggle('liked', !liked);
+      likeBtn.querySelector('.heart').textContent = liked ? '🤍' : '❤️';
+      likeBtn.querySelector('.like-count').textContent = likeCount;
+      showToast(liked ? '좋아요를 취소했어요' : '❤️ 좋아요!');
+    } catch (err) {
+      showToast('❌ ' + err.message);
+    } finally {
+      likeBtn.disabled = false;
+    }
+    return;
+  }
+
+  // Comment toggle
+  const toggleBtn = e.target.closest('.comment-toggle');
+  if (toggleBtn) {
+    const id = toggleBtn.dataset.id;
+    document.getElementById('cs-' + id)?.classList.toggle('open');
+    return;
+  }
+
+  // Comment submit
+  const commentBtn = e.target.closest('.btn-comment');
+  if (commentBtn) {
+    const id   = commentBtn.dataset.id;
+    const card = document.querySelector(`.post-card[data-id="${id}"]`);
+    const nameInput = card.querySelector('.c-name');
+    const textInput = card.querySelector('.c-text-input');
+    const name  = nameInput.value.trim();
+    const text  = textInput.value.trim();
+    if (!name) { showToast('이름을 입력해주세요!'); nameInput.focus(); return; }
+    if (!text) { showToast('댓글 내용을 입력해주세요!'); textInput.focus(); return; }
+
+    commentBtn.disabled = true;
+    try {
+      const comment = await api(`/api/posts/${id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, text }),
+      });
+
+      // Append comment to list
+      const list = document.getElementById('cl-' + id);
+      const noMsg = list.querySelector('.no-comments');
+      if (noMsg) noMsg.remove();
+
+      const div = document.createElement('div');
+      div.className = 'comment-item';
+      div.innerHTML = `<span class="c-author">${esc(comment.name)}</span><span class="c-text">${esc(comment.text)}</span><div class="c-time">${formatDate(comment.created_at)}</div>`;
+      list.appendChild(div);
+
+      // Update count
+      const toggle = card.querySelector('.comment-toggle');
+      const count  = list.querySelectorAll('.comment-item').length;
+      toggle.textContent = `💬 댓글 ${count}`;
+
+      nameInput.value = '';
+      textInput.value = '';
+      showToast('💬 댓글이 등록됐어요!');
+    } catch (err) {
+      showToast('❌ ' + err.message);
+    } finally {
+      commentBtn.disabled = false;
+    }
+    return;
+  }
+});
+
+// Enter key in comment text field
+document.getElementById('gallery').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('c-text-input')) {
+    const id = e.target.dataset.id;
+    document.querySelector(`.btn-comment[data-id="${id}"]`)?.click();
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────
+renderGallery();
+</script>
+</body>
+</html>
